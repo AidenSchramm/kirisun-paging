@@ -1,0 +1,47 @@
+# This is a sample ude rules file to staticaly assign names to sound cards (in this case USB) that have the exact
+# same product, vendor and serial number. This normally creates card names in pulseaudio that are a combination of this
+# attributes plus an auto incrementing numbering, the problem is that the cards will get their names depending on the 
+# order the cards are plugged in.
+# This udev rules fixes that issues by assigning a name to any card that is plugged in the same USB port, I don't know
+# any other way.
+#
+# Name this file something like /etc/udev/rules.d/95-identical-cards-names.rules
+# The list of cards should be changed to match your system, the only lines you are supposed to change/remove/add 
+# are DEVPATHs, look a the comments comments to see where to get the soundcard path.
+#
+#
+# For alsa card naming (check with `cat /proc/asound/cards`)
+#
+SUBSYSTEM!="sound", GOTO="alsa_naming_end"
+ACTION!="add", GOTO="alsa_naming_end"
+
+# DEVPATH can be obtained by looking at `udevadm monitor --subsystem=sound` and while pluging in the sound card.
+# Do one card at a time, the "?" char on card should stay as it matches any card number that may pop on that USB port.
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.1/1-1.1.1:1.0/sound/card?", ATTR{id}="Trunk_1"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.2/1-1.1.2:1.0/sound/card?", ATTR{id}="Trunk_2"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.4/1-1.1.4:1.0/sound/card?", ATTR{id}="Trunk_3"
+
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.2/1-1.2.1/1-1.2.1:1.0/sound/card?", ATTR{id}="Radio_1"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.2/1-1.2.2/1-1.2.2:1.0/sound/card?", ATTR{id}="Radio_2"
+
+LABEL="alsa_naming_end"
+
+#
+# For pulsaudio card naming (check with `pacmd list-sources`)
+#
+# This could go in a separate file if you want
+SUBSYSTEM!="sound", GOTO="pa_naming_end"
+ACTION!="change", GOTO="pa_naming_end"
+KERNEL!="card*", GOTO="pa_naming_end"
+
+# Same as before, edit this block at will.
+
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.1/1-1.1.1:1.0/sound/card?", ENV{PULSE_NAME}="Trunk_1"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.2/1-1.1.2:1.0/sound/card?", ENV{PULSE_NAME}="Trunk_2"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.1/1-1.1.4/1-1.1.4:1.0/sound/card?", ENV{PULSE_NAME}="Trunk_3"
+
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.2/1-1.2.1/1-1.2.1:1.0/sound/card?", ENV{PULSE_NAME}="Radio_1"
+DEVPATH=="/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/1-1.2/1-1.2.2/1-1.2.2:1.0/sound/card?", ENV{PULSE_NAME}="Radio_2"
+
+
+LABEL="pa_naming_end"

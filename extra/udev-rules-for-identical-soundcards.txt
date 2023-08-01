@@ -1,0 +1,5 @@
+Github link:
+https://gist.github.com/mpaolino/f29954781ee1242c753ccfa387a9e652
+
+Rules location:
+/etc/udev/rules.d/95-identical-cards-names.rules
