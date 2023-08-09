@@ -15,7 +15,7 @@ import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 
-global lines
+
 
 radio_1_id = "SK7SPJ8PY9OJZ5EU"
 
@@ -183,23 +183,14 @@ class Radio:
         task.start()
 
 def router(trunk, radio):
-    global lines
     try:
         if trunk.gpio():
             trunk.busy = True
         else:
             trunk.busy = False
 
-        if (not trunk.busy):
-            trunk.valid = False
-
         trunk.poll()
 
-        if (trunk.valid) and (not trunk.active):
-            if ("DTMF:" in trunk.line):
-                trunk.digit = trunk.line.split()[1]
-                trunk.extra += trunk.digit
-                print(trunk.extra)
         if (not trunk.active) and (not radio.active):
             if ("DTMF:" in trunk.line):
                 trunk.digit = trunk.line.split()[1]
@@ -207,8 +198,7 @@ def router(trunk, radio):
             
             if len(trunk.number) == 7:
                 trunk.valid = True
-                #if trunk.number == "3319904":
-                if trunk.number in lines:
+                if trunk.number == "3319904":
                     trunk.active = True
                     radio.active = True
                     trunk.delay = True
@@ -248,17 +238,11 @@ def router(trunk, radio):
             # Handle "bwong" call interrupt SFX from paging kirisun
             if ("AudioALSAStreamOut: open(), flags 4" in radio.line) and (radio.transmit):
                 print("Bwong start")
-                radio.mute(trunk)
                 radio.ptt_off()
                 radio.transmit = False
                 radio.receive = True
                 radio.mute(trunk)
                 radio.blank = True
-
-                time.sleep(0.2)
-                print("Test bwong stop")
-                radio.unmute(trunk)
-                radio.blank = False
 
             if ("AudioALSAStreamOut: close(), flags 4" in radio.line) and (radio.blank):
                 print("Bwong stop")
@@ -274,13 +258,12 @@ def router(trunk, radio):
                 radio.transmit = True
                 radio.receive = False
 
-            if (trunk.active) and ((time.time() > trunk.time_stop) or (not trunk.busy)):
+            if (trunk.active) and ((time.time() > trunk.time_stop) or (not trunk.gpio())):
                 print("unkeying radio...")
-                radio.mute()
-                radio.unpatch()
                 radio.ptt_off()
                 radio.transmit = False
                 radio.receive = True
+                radio.unpatch()
                 print("[[PAGE DONE]]")
 
                 radio.set_group(1)
@@ -290,9 +273,10 @@ def router(trunk, radio):
                 trunk.time_stop = 99999999999
                 trunk.active = False
                 trunk.valid = False
-                trunk.delay = False
                 radio.active = False
 
+            if (not trunk.busy):
+                trunk.valid = False
 
     except KeyboardInterrupt:
         radio.ptt_off()
@@ -314,9 +298,6 @@ trunk_6 = Trunk("6", 25)
 radio_1 = Radio("1", radio_1_id)
 
 radio_1.ptt_off()
-
-with open('numbers.txt') as f:
-    lines = f.read().splitlines()
 
 while True:
     try:

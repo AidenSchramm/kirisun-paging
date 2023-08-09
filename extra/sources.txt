@@ -2,4 +2,4 @@ pactl list sources short
 
 udevadm monitor --subsystem=sound
 
-sudo udevadm control --reload-rules & udevadm trigger --attr-match=subsystem=sound
+sudo udevadm control --reload-rules & sudo udevadm trigger --attr-match=subsystem=sound

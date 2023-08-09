@@ -1,0 +1,92 @@
+# test number
+3319904
+
+###############################
+# Sioux Falls School District #
+###############################
+
+# Rosa Parks
+3306414
+# Pettigrew
+3306415
+# LBA
+3306420
+# Nurse J.Harris
+3306420
+# Cleveland
+3306443
+# Harvey Dunn
+3306453
+# Eugene Field
+3306463
+# WHS Nurse
+3306469
+# Robert Frost
+3306477
+# Garfield
+3308719
+# John Harris
+3308745
+# Oscar Howe
+3308774
+# Howard Wood
+3308903
+# Hayward
+3308992
+# Discovery
+3338011
+# New Tech
+3338029
+# Lowell
+3338068
+# Horace Mann
+3338072
+# Renberg
+3338077
+# Terry Redlin
+3338096
+# Anne Sullivan
+3338104
+# Susan B
+3338108
+# Laura Wilder
+3338133
+# Sonia S
+3338524
+# IPC
+3359205
+# McGovern MS
+3359212
+# WHS
+3359213
+# Axtell
+3359214
+# RHS
+3359215
+# Hawthorne
+3359218
+# Edison
+3359219
+# Patric Henry
+3359224
+# Whittier
+3359225
+# Central SVC
+3359241
+# LHS
+3359244
+# Jefferson HS
+3359250
+# Ben Riefel MS
+3359255
+
+### GROUP CALL (HS, MS, SETI) ###
+3577406
+### GROUP CALL (ELEM) ###
+3670700
+
+# Memorial
+3732940
+
+
+

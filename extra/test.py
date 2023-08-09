@@ -15,7 +15,7 @@ import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 
-global lines
+
 
 radio_1_id = "SK7SPJ8PY9OJZ5EU"
 
@@ -31,7 +31,6 @@ class Trunk:
                                                                                 stdout=subprocess.PIPE, stderr=open('/dev/null','a'), shell=True)
         os.set_blocking(self.dtmf.stdout.fileno(), False)
         self.number = ''
-        self.extra = ''
         self.digit  = ''
         self.time_start = 0
         self.time_stop  = 0
@@ -96,19 +95,14 @@ class Radio:
 
     def patch(self, trunk):
         print("Patch audio")
-        
-        print(" + " + "pactl load-module module-loopback source=alsa_input.Trunk_" + trunk.channel + ".mono-fallback sink=alsa_output.Radio_" + self.channel + ".analog-stereo")
-        self.mic_id = subprocess.check_output("pactl load-module module-loopback source=alsa_input.Trunk_" + trunk.channel + ".mono-fallback sink=alsa_output.Radio_" + self.channel + ".analog-stereo", shell=True).decode('utf-8').strip()
-        print(" + " + "pactl load-module module-loopback source=alsa_input.Radio_" + self.channel + ".mono-fallback sink=alsa_output.Trunk_" + trunk.channel + ".analog-stereo")
-        self.speaker_id = subprocess.check_output("pactl load-module module-loopback source=alsa_input.Radio_" + self.channel + ".mono-fallback sink=alsa_output.Trunk_" + trunk.channel + ".analog-stereo", shell=True).decode('utf-8').strip()
-        print(self.mic_id)
-        print(self.speaker_id)
+        self.mic_id = subprocess.Popen("parec --latency-msec 5 --format=s16le --channels=1 --rate=22050 -d alsa_input.Trunk_" + trunk.channel + ".mono-fallback | pacat -d alsa_output.Radio_" + self.channel + ".analog-stereo", shell=True)
+        self.speaker_id = subprocess.Popen("parec --latency-msec 5 --format=s16le --channels=1 --rate=22050 -d alsa_input.Radio_" + self.channel + ".mono-fallback | pacat -d alsa_output.Trunk_" + trunk.channel + ".analog-stereo", shell=True)
 
     def unpatch(self):
         print("Unpatch audio")
         try:
-            os.system("pactl unload-module " + self.mic_id)
-            os.system("pactl unload-module " + self.speaker_id)
+            os.kill(self.mic_id.pid, 9)
+            os.kill(self.speaker_id.pid, 9)
         except AttributeError:
             print("Nothing to unpatch")
 
@@ -120,6 +114,7 @@ class Radio:
         print("Unmute audio out")
         os.system("pactl set-sink-mute " + "alsa_output.Trunk_" + trunk.channel + ".analog-stereo" + " 0")
 
+
     def press_menu(self, target):
         target.press('KEYCODE_MENU', MonkeyDevice.DOWN_AND_UP)
 
@@ -129,7 +124,7 @@ class Radio:
     def press_down(self, target):
         target.press('KEYCODE_DPAD_DOWN', MonkeyDevice.DOWN_AND_UP)
 
-    def press_up(self, target): 
+    def press_up(self, target):
         target.press('KEYCODE_DPAD_UP', MonkeyDevice.DOWN_AND_UP)
 
     def press_back(self, target):
@@ -183,23 +178,14 @@ class Radio:
         task.start()
 
 def router(trunk, radio):
-    global lines
     try:
         if trunk.gpio():
             trunk.busy = True
         else:
             trunk.busy = False
 
-        if (not trunk.busy):
-            trunk.valid = False
-
         trunk.poll()
-
-        if (trunk.valid) and (not trunk.active):
-            if ("DTMF:" in trunk.line):
-                trunk.digit = trunk.line.split()[1]
-                trunk.extra += trunk.digit
-                print(trunk.extra)
+        
         if (not trunk.active) and (not radio.active):
             if ("DTMF:" in trunk.line):
                 trunk.digit = trunk.line.split()[1]
@@ -207,8 +193,7 @@ def router(trunk, radio):
             
             if len(trunk.number) == 7:
                 trunk.valid = True
-                #if trunk.number == "3319904":
-                if trunk.number in lines:
+                if trunk.number == "3319904":
                     trunk.active = True
                     radio.active = True
                     trunk.delay = True
@@ -246,27 +231,19 @@ def router(trunk, radio):
 
 
             # Handle "bwong" call interrupt SFX from paging kirisun
-            if ("AudioALSAStreamOut: open(), flags 4" in radio.line) and (radio.transmit):
-                print("Bwong start")
-                radio.mute(trunk)
+            if ("AudioTrack: start(): 0x8fcf7e00, mState = 1" in radio.line) and (radio.transmit):
                 radio.ptt_off()
                 radio.transmit = False
                 radio.receive = True
                 radio.mute(trunk)
                 radio.blank = True
 
-                time.sleep(0.2)
-                print("Test bwong stop")
-                radio.unmute(trunk)
-                radio.blank = False
-
-            if ("AudioALSAStreamOut: close(), flags 4" in radio.line) and (radio.blank):
-                print("Bwong stop")
+            if ("AudioTrack: stop(): 0x8fcf7e00, mState = 0" in radio.line) and (radio.blank):
                 radio.unmute(trunk)
                 radio.blank = False
 
             #if "onPttChangeEvent:2-1" in radio.line and trunk.active and radio.drop_time < time.time():
-            if ("AudioALSAStreamOut: close(), flags 2" in radio.line) and (trunk.active) and (trunk.time_start < time.time()):
+            if ("AudioTrack: stop(): 0x8fcf8100, mState = 0" in radio.line) and (trunk.active): #and (radio.drop_time < time.time()):
                 radio.drop_time = time.time() + 0.5
                 print("***ptt dropped: re-keying radio***")
                 radio.ptt_off()
@@ -274,13 +251,12 @@ def router(trunk, radio):
                 radio.transmit = True
                 radio.receive = False
 
-            if (trunk.active) and ((time.time() > trunk.time_stop) or (not trunk.busy)):
+            if (trunk.active) and ((time.time() > trunk.time_stop) or (not trunk.gpio())):
                 print("unkeying radio...")
-                radio.mute()
-                radio.unpatch()
                 radio.ptt_off()
                 radio.transmit = False
                 radio.receive = True
+                radio.unpatch()
                 print("[[PAGE DONE]]")
 
                 radio.set_group(1)
@@ -290,9 +266,10 @@ def router(trunk, radio):
                 trunk.time_stop = 99999999999
                 trunk.active = False
                 trunk.valid = False
-                trunk.delay = False
                 radio.active = False
 
+            if (not trunk.busy):
+                trunk.valid = False
 
     except KeyboardInterrupt:
         radio.ptt_off()
@@ -314,9 +291,6 @@ trunk_6 = Trunk("6", 25)
 radio_1 = Radio("1", radio_1_id)
 
 radio_1.ptt_off()
-
-with open('numbers.txt') as f:
-    lines = f.read().splitlines()
 
 while True:
     try:
